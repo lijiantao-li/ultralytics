@@ -10,7 +10,7 @@ import torch.nn as nn
 from ultralytics.nn.modules import (AIFI, C1, C2, C3, C3TR, SPP, SPPF, Bottleneck, BottleneckCSP, C2f, C3Ghost, C3x,
                                     Classify, Concat, Conv, Conv2, ConvTranspose, Detect, DWConv, DWConvTranspose2d,
                                     Focus, GhostBottleneck, GhostConv, HGBlock, HGStem, Pose, RepC3, RepConv,
-                                    RTDETRDecoder, Segment)
+                                    RTDETRDecoder, Segment, UAFM_SpAtten, UAFM_ChAtten, UAFM)
 from ultralytics.utils import DEFAULT_CFG_DICT, DEFAULT_CFG_KEYS, LOGGER, colorstr, emojis, yaml_load
 from ultralytics.utils.checks import check_requirements, check_suffix, check_yaml
 from ultralytics.utils.loss import v8ClassificationLoss, v8DetectionLoss, v8PoseLoss, v8SegmentationLoss
@@ -74,8 +74,12 @@ class BaseModel(nn.Module):
         for m in self.model:
             if m.f != -1:  # if not from previous layer
                 x = y[m.f] if isinstance(m.f, int) else [x if j == -1 else y[j] for j in m.f]  # from earlier layers
+                # if not isinstance(m.f, int):
+                #     print(len(x))
+                #     print(x[0].shape, x[1].shape)
             if profile:
                 self._profile_one_layer(m, x, dt)
+            # print(x.shape)
             x = m(x)  # run
             y.append(x if m.i in self.save else None)  # save output
             if visualize:
@@ -561,9 +565,9 @@ def torch_safe_load(weight):
     file = attempt_download_asset(weight)  # search online if missing locally
     try:
         with temporary_modules({
-                'ultralytics.yolo.utils': 'ultralytics.utils',
-                'ultralytics.yolo.v8': 'ultralytics.models.yolo',
-                'ultralytics.yolo.data': 'ultralytics.data'}):  # for legacy 8.0 Classify and Pose models
+            'ultralytics.yolo.utils': 'ultralytics.utils',
+            'ultralytics.yolo.v8': 'ultralytics.models.yolo',
+            'ultralytics.yolo.data': 'ultralytics.data'}):  # for legacy 8.0 Classify and Pose models
             return torch.load(file, map_location='cpu'), file  # load
 
     except ModuleNotFoundError as e:  # e.name is missing module name
@@ -705,6 +709,10 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             args = [ch[f]]
         elif m is Concat:
             c2 = sum(ch[x] for x in f)
+        elif m is UAFM_SpAtten:
+            c2 = ch[f[0]]
+            args = [ch[f[1]], c2, c2]
+            # print(*args)
         elif m in (Detect, Segment, Pose):
             args.append([ch[x] for x in f])
             if m is Segment:
