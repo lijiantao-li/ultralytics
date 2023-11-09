@@ -709,7 +709,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             args = [ch[f]]
         elif m is Concat:
             c2 = sum(ch[x] for x in f)
-        elif m is UAFM_SpAtten:
+        elif m is (UAFM_SpAtten, UAFM_ChAtten):
             c2 = ch[f[0]]
             args = [ch[f[1]], c2, c2]
             # print(*args)

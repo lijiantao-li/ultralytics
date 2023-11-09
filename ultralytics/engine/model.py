@@ -72,6 +72,8 @@ class Model(nn.Module):
         self.overrides = {}  # overrides for trainer object
         self.metrics = None  # validation/training metrics
         self.session = None  # HUB session
+        self.experiment_dir = None
+        self.model_name = None
         self.task = task  # task type
         model = str(model).strip()  # strip spaces
 
@@ -330,9 +332,11 @@ class Model(nn.Module):
         overrides = yaml_load(checks.check_yaml(kwargs['cfg'])) if kwargs.get('cfg') else self.overrides
         custom = {'data': TASK2DATA[self.task]}  # method defaults
         args = {**overrides, **custom, **kwargs, 'mode': 'train'}  # highest priority args on the right
+        # print(args)
         if args.get('resume'):
             args['resume'] = self.ckpt_path
-
+        self.experiment_dir= args.get('experiment_dir')
+        self.model_name = args.get('model_name')
         self.trainer = (trainer or self._smart_load('trainer'))(overrides=args, _callbacks=self.callbacks)
         if not args.get('resume'):  # manually set model only if not resuming
             self.trainer.model = self.trainer.get_model(weights=self.model if self.ckpt else None, cfg=self.model.yaml)

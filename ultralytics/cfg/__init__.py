@@ -154,7 +154,8 @@ def get_save_dir(args, name=None):
         from ultralytics.utils.files import increment_path
 
         project = args.project or (ROOT /
-                                   '../tests/tmp/runs' if TESTS_RUNNING else Path(SETTINGS['runs_dir'])) / args.task
+                                   '../tests/tmp/runs' if TESTS_RUNNING else Path(
+            SETTINGS['runs_dir'])) / args.experiment_dir / args.task
         name = name or args.name or f'{args.mode}'
         save_dir = increment_path(Path(project) / name, exist_ok=args.exist_ok if RANK in (-1, 0) else True)
 

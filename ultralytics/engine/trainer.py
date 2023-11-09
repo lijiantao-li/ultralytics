@@ -81,6 +81,8 @@ class BaseTrainer:
             overrides (dict, optional): Configuration overrides. Defaults to None.
         """
         self.args = get_cfg(cfg, overrides)
+        self.experiment_dir = self.args.experiment_dir
+        print(self.experiment_dir)
         self.check_resume(overrides)
         self.device = select_device(self.args.device, self.args.batch)
         self.validator = None
@@ -91,12 +93,13 @@ class BaseTrainer:
 
         # Dirs
         self.save_dir = get_save_dir(self.args)
+        my_traindir = self.save_dir
         self.wdir = self.save_dir / 'weights'  # weights dir
         if RANK in (-1, 0):
             self.wdir.mkdir(parents=True, exist_ok=True)  # make dir
             self.args.save_dir = str(self.save_dir)
             yaml_save(self.save_dir / 'args.yaml', vars(self.args))  # save run args
-        self.last, self.best = self.wdir / 'last.pt', self.wdir / 'best.pt'  # checkpoint paths
+        self.last, self.best = self.wdir / f'{self.experiment_dir }_last.pt', self.wdir / f'{self.experiment_dir }_best.pt'  # checkpoint paths
         self.save_period = self.args.save_period
 
         self.batch_size = self.args.batch
