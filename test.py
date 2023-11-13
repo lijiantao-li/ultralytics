@@ -7,29 +7,37 @@
 
 from ultralytics import YOLO
 import argparse
+import os
 from pathlib import Path
 
 my_traindir = ''
 my_testdir = ''
 
 
-# FILE = Path(__file__).resolve()
-# # Load a model
+def find_latest_folder(directory):
+    # 获取目录中所有文件夹的列表
+    folders = [f for f in os.listdir(directory) if os.path.isdir(os.path.join(directory, f))]
 
-# # model = YOLO("yolov8l.pt")  # load a pretrained model (recommended for training)
-#
-# # Use the model
-# model.train(data="coco128.yaml", epochs=1, batch=4,task='detect',ltest='ltest')  # train the model
+    # 获取每个文件夹的创建时间
+    folder_creation_times = [(folder, os.path.getctime(os.path.join(directory, folder))) for folder in folders]
+
+    # 按创建时间排序
+    folder_creation_times.sort(key=lambda x: x[1], reverse=True)
+
+    # 返回最新创建的文件夹的路径
+    if folder_creation_times:
+        latest_folder = folder_creation_times[0][0]
+        return os.path.join(directory, latest_folder)
+    else:
+        return None
+
 
 #
 # print(metrics.box.map)  # map50-95
 # print(metrics.box.map50)  # map50
 # print(metrics.box.map75)  # map75
 #
-# print(metrics.box.maps)   # a list contains map50-95 of each category
 
-# results = model("https://ultralytics.com/images/bus.jpg",save=True)  # predict on an image
-# path = model.export(format="onnx")  # export the model to ONNX format
 def main():
     parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
     parser.add_argument('--model', type=str, default="runs/yolov8l/train/weights/yolov8l_best.pt", help='模型名称')
@@ -44,26 +52,24 @@ def main():
         model = YOLO(args.model).load('yolov8l.pt')
         experiment_dir = args.model[:-5]
     if args.mode == 'test':
-        metrics = model.val(data="myVisDrone.yaml", split='val', experiment_dir=experiment_dir,
-                            save_txt=True,save_json=True)  # evaluate model performance on the validation set
-        # 定义每行要输出的元素数量
-        elements_per_line = 3
+        directory_to_search = f"./runs/{experiment_dir}/val"
+        latest_folder = find_latest_folder(directory_to_search)
 
-        # for i, item in enumerate(metrics.box.maps):
-        #     # 输出当前元素
-        #     print(item, end=" ")
+        if latest_folder:
+            print(f"The latest folder in {directory_to_search} is: {latest_folder}")
+        else:
+            print(f"No folders found in {directory_to_search}")
+        # metrics = model.val(data="myVisDrone.yaml", split='val', experiment_dir=experiment_dir,
+        #                     save_txt=True, save_json=True)  # evaluate model performance on the validation set
         #
-        #     # 检查是否需要换行
-        #     if (i + 1) % elements_per_line == 0:
-        #         print()  # 添加换行符
-        #
-        # # 如果列表长度不是3的倍数，最后可能需要额外的换行
-        # if len(metrics.box.maps) % elements_per_line != 0:
-        print(metrics.box.maps)
-        print(metrics)
+        # print(metrics.box.maps)
+        # print(metrics)
     elif args.mode == 'train':
 
         model.train(data="myVisDrone.yaml", epochs=1, batch=4, task='detect', experiment_dir=experiment_dir)
+
+
+# 用法示例
 
 
 if __name__ == '__main__':
