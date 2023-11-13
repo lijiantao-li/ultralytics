@@ -32,7 +32,7 @@ my_testdir = ''
 # path = model.export(format="onnx")  # export the model to ONNX format
 def main():
     parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
-    parser.add_argument('--model', type=str, default="runs/yolov/detect/train2/weights/yolov_best.pt", help='模型名称')
+    parser.add_argument('--model', type=str, default="runs/yolov8l/train/weights/yolov8l_best.pt", help='模型名称')
     parser.add_argument('--mode', type=str, default='test', help='一个字符串参数，默认值为 "default_value"')
     args = parser.parse_args()
     last_slash_index = args.model.rfind('/')
@@ -44,25 +44,26 @@ def main():
         model = YOLO(args.model).load('yolov8l.pt')
         experiment_dir = args.model[:-5]
     if args.mode == 'test':
-        metrics = model.val(data="coco128.yaml", split='val', experiment_dir=experiment_dir,
+        metrics = model.val(data="myVisDrone.yaml", split='val', experiment_dir=experiment_dir,
                             save_txt=True,save_json=True)  # evaluate model performance on the validation set
         # 定义每行要输出的元素数量
         elements_per_line = 3
 
-        for i, item in enumerate(metrics.box.maps):
-            # 输出当前元素
-            print(item, end=" ")
-
-            # 检查是否需要换行
-            if (i + 1) % elements_per_line == 0:
-                print()  # 添加换行符
-
-        # 如果列表长度不是3的倍数，最后可能需要额外的换行
-        if len(metrics.box.maps) % elements_per_line != 0:
-            print()
+        # for i, item in enumerate(metrics.box.maps):
+        #     # 输出当前元素
+        #     print(item, end=" ")
+        #
+        #     # 检查是否需要换行
+        #     if (i + 1) % elements_per_line == 0:
+        #         print()  # 添加换行符
+        #
+        # # 如果列表长度不是3的倍数，最后可能需要额外的换行
+        # if len(metrics.box.maps) % elements_per_line != 0:
+        print(metrics.box.maps)
+        print(metrics)
     elif args.mode == 'train':
 
-        model.train(data="coco128.yaml", epochs=1, batch=4, task='detect', experiment_dir=experiment_dir)
+        model.train(data="myVisDrone.yaml", epochs=1, batch=4, task='detect', experiment_dir=experiment_dir)
 
 
 if __name__ == '__main__':
