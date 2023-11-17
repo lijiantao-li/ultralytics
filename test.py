@@ -8,28 +8,42 @@
 from ultralytics import YOLO
 import argparse
 import os
+import sys
 from pathlib import Path
+import shutil
 
 my_traindir = ''
-my_testdir = ''
 
 
-def find_latest_folder(directory):
+def copy_file(source_path, destination_path):
+    try:
+        shutil.copy(source_path, destination_path)
+        print(f"文件已成功复制从 {source_path} 到 {destination_path}")
+    except Exception as e:
+        print(f"复制文件时出错: {e}")
+
+
+# 用法示例
+
+
+def find_latest_folder_with_keyword(directory, keyword):
     # 获取目录中所有文件夹的列表
     folders = [f for f in os.listdir(directory) if os.path.isdir(os.path.join(directory, f))]
 
-    # 获取每个文件夹的创建时间
-    folder_creation_times = [(folder, os.path.getctime(os.path.join(directory, folder))) for folder in folders]
+    # 获取每个文件夹的创建时间和名称
+    folder_creation_times = [(folder, os.path.getctime(os.path.join(directory,
+                                                                    folder))) for folder in folders]
 
     # 按创建时间排序
     folder_creation_times.sort(key=lambda x: x[1], reverse=True)
 
-    # 返回最新创建的文件夹的路径
-    if folder_creation_times:
-        latest_folder = folder_creation_times[0][0]
-        return os.path.join(directory, latest_folder)
-    else:
-        return None
+    # 遍历排序后的文件夹列表，找到包含指定关键字的文件夹
+    for folder, _ in folder_creation_times:
+        if keyword in folder:
+            return os.path.join(directory, folder)
+
+    # 如果没有找到匹配的文件夹，则返回None
+    return None
 
 
 #
@@ -51,19 +65,38 @@ def main():
     else:
         model = YOLO(args.model).load('yolov8l.pt')
         experiment_dir = args.model[:-5]
-    if args.mode == 'test':
-        directory_to_search = f"./runs/{experiment_dir}/val"
-        latest_folder = find_latest_folder(directory_to_search)
 
-        if latest_folder:
-            print(f"The latest folder in {directory_to_search} is: {latest_folder}")
-        else:
-            print(f"No folders found in {directory_to_search}")
-        # metrics = model.val(data="myVisDrone.yaml", split='val', experiment_dir=experiment_dir,
-        #                     save_txt=True, save_json=True)  # evaluate model performance on the validation set
-        #
-        # print(metrics.box.maps)
-        # print(metrics)
+    directory_to_search = f"./runs/{experiment_dir}"
+    if args.mode == 'test':
+
+        metrics = model.val(data="myVisDrone.yaml", split='val', experiment_dir=experiment_dir,
+                            save_txt=True, save_json=True)  # evaluate model performance on the validation set
+        print(metrics.box.maps)
+        print(metrics)
+        my_testdir = find_latest_folder_with_keyword(directory_to_search, "val")
+
+        copy_file('test.log', fr"{my_testdir}/test.log")
+        print(f"The latest folder in {directory_to_search} is: {my_testdir}")
+        with open(f'{my_testdir}/myresults.txt', 'w') as f:
+            f.write(f"权重文件：{args.model}\n ")
+            f.write('总map50:' + str(metrics.box.map50) + '\n')
+            f.write('总map75:' + str(metrics.box.map75) + '\n')
+            f.write('总p：'+str(metrics.box.mp)+'\n')
+            f.write('总r：'+str(metrics.box.mr)+'\n')
+            f.write('总map50-95:' + str(metrics.box.map) + '\n')
+            f.write('各类map50:' + str(metrics.box.ap50) + '\n')
+            f.write('各类map50-95:' + str(metrics.box.ap) + '\n')
+            f.write('各类p:'+str(metrics.box.p)+'\n')
+
+            f.write('speed\n')
+            f.write('pre: ' + str(metrics.speed['preprocess']) + 'ms\n')
+            f.write('inference: ' + str(metrics.speed['inference']) + 'ms\n')
+            f.write('post: ' + str(metrics.speed['postprocess']) + 'ms\n')
+            f.write('loss: ' + str(metrics.speed['loss']) + 'ms\n')
+            f.write('fps: ' + str(1000/(metrics.speed['preprocess']+metrics.speed['inference']+metrics.speed['postprocess']+metrics.speed['loss'])) + '\n')
+            f.write('confusion_matrix:'+str(metrics.confusion_matrix) + '\n')
+            f.write(str(metrics))
+
     elif args.mode == 'train':
 
         model.train(data="myVisDrone.yaml", epochs=1, batch=4, task='detect', experiment_dir=experiment_dir)
